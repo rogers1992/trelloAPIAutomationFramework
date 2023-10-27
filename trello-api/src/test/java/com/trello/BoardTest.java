@@ -1,5 +1,6 @@
 package com.trello;
 
+import com.trello.utils.JsonPath;
 import com.trello.utils.PropertiesInfo;
 import io.restassured.builder.RequestSpecBuilder;
 import io.restassured.builder.ResponseSpecBuilder;
@@ -24,14 +25,13 @@ public class BoardTest {
     private Map<String, String> headers;
     private Map<String, String> queryParams;
     private String boardId = "";
-
+    private RequestHandler request;
     @BeforeClass
     public void setUp(){
+        request = new RequestHandler();
         apiKey = PropertiesInfo.getInstance().getApiKey();
         apiToken = PropertiesInfo.getInstance().getApiToken();
-        requestSpec = new RequestSpecBuilder()
-                .setBaseUri(String.format("%s/%s", PropertiesInfo.getInstance().getBaseApi(),
-                    PropertiesInfo.getInstance().getApiVersion())).build();
+
         responseSpec = new ResponseSpecBuilder().expectStatusCode(200)
                 .expectContentType(ContentType.JSON)
                 .build();
@@ -40,15 +40,23 @@ public class BoardTest {
         queryParams = new HashMap<String, String>();
         queryParams.put("key", apiKey);
         queryParams.put("token", apiToken);
+
+        request.setBaseUrl(String.format("%s/%s", PropertiesInfo.getInstance().getBaseApi(),
+                PropertiesInfo.getInstance().getApiVersion()));
+        request.setHeaders(headers);
+        request.setQueryParam(queryParams);
+
+        requestSpec = new RequestSpecBuilder().setBaseUri(request.getBaseUrl()).build();
     }
     @Test(priority = 1)
     public void testCreateBoard(){
         String boardName = "boardTestRoger";
-        queryParams.put("name", boardName);
+        //queryParams.put("name", boardName);
+        request.setQueryParam("name", boardName);
         var response = RestAssured.given().log().all().when()
                 .spec(requestSpec)
-                .headers(headers)
-                .queryParams(queryParams)
+                .headers(request.getHeaders())
+                .queryParams(request.getQueryParams())
                 .post("/boards/");
 
         var jsonResponse = response.getBody().asPrettyString();
@@ -62,12 +70,13 @@ public class BoardTest {
     @Test(priority = 2)
     public void updateBoardTest(){
         String boardNameUpdate = "boardTestRogerUpdated";
-        queryParams.put("name", boardNameUpdate);
+        request.setQueryParam("name", boardNameUpdate);
+        //queryParams.put("name", boardNameUpdate);
 
         var response = RestAssured.given().log().all().when()
                 .spec(requestSpec)
-                .headers(headers)
-                .queryParams(queryParams)
+                .headers(request.getHeaders())
+                .queryParams(request.getQueryParams())
                 .put(String.format("/boards/%s", boardId))
                 .then()
                 .spec(responseSpec).extract().response();
@@ -80,13 +89,14 @@ public class BoardTest {
     public void getBoardTest(){
         var response = RestAssured.given().log().all().when()
                 .spec(requestSpec)
-                .headers(headers)
-                .queryParams(queryParams)
+                .headers(request.getHeaders())
+                .queryParams(request.getQueryParams())
                 .get(String.format("/boards/%s", boardId))
                 .then()
                 .spec(responseSpec).extract().response();
 
-        String name = response.path("name");
+        //String name = response.path("name");
+        String name = JsonPath.getResult(response.getBody().asPrettyString(), "$.name");
 
         var jsonResponse = response.getBody().asPrettyString();
         System.out.println(jsonResponse);
@@ -96,8 +106,8 @@ public class BoardTest {
     public void deleteBoardTest(){
         var response = RestAssured.given().log().all().when()
                 .spec(requestSpec)
-                .headers(headers)
-                .queryParams(queryParams)
+                .headers(request.getHeaders())
+                .queryParams(request.getQueryParams())
                 .delete(String.format("/boards/%s", boardId))
                 .then()
                 .spec(responseSpec).extract().response();
