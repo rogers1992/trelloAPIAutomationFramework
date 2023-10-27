@@ -1,5 +1,6 @@
 package com.trello;
 
+import com.trello.utils.PropertiesInfo;
 import io.restassured.builder.RequestSpecBuilder;
 import io.restassured.builder.ResponseSpecBuilder;
 import io.restassured.http.ContentType;
@@ -13,6 +14,7 @@ import io.restassured.RestAssured;
 
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Properties;
 
 public class BoardTest {
     private RequestSpecification requestSpec;
@@ -25,9 +27,11 @@ public class BoardTest {
 
     @BeforeClass
     public void setUp(){
-        apiKey = "e10bd0ffb51396f613ce4cd8c3cb5e15";
-        apiToken = "ATTAedd0a034a40d7853ebd78c3e292185eef47bb96d04c5cbb1e1c34c304e88d6721CCD40CF";
-        requestSpec = new RequestSpecBuilder().setBaseUri("https://api.trello.com/1").build();
+        apiKey = PropertiesInfo.getInstance().getApiKey();
+        apiToken = PropertiesInfo.getInstance().getApiToken();
+        requestSpec = new RequestSpecBuilder()
+                .setBaseUri(String.format("%s/%s", PropertiesInfo.getInstance().getBaseApi(),
+                    PropertiesInfo.getInstance().getApiVersion())).build();
         responseSpec = new ResponseSpecBuilder().expectStatusCode(200)
                 .expectContentType(ContentType.JSON)
                 .build();

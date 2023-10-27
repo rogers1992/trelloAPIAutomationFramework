@@ -7,5 +7,5 @@
 
 rootProject.name = 'trello-automation'
 include 'trello-api'
-include 'trell-core'
+include 'trello-core'
 
