@@ -2,9 +2,12 @@ plugins {
     id 'java'
 }
 dependencies {
+    //this line relates the trello-api module with trello-core module
     implementation project(":trello-core")
     // https://mvnrepository.com/artifact/io.rest-assured/rest-assured
     testImplementation group: 'io.rest-assured', name: 'rest-assured', version: '5.3.2'
+    // https://mvnrepository.com/artifact/io.rest-assured/json-schema-validator
+    implementation group: 'io.rest-assured', name: 'json-schema-validator', version: '5.3.2'
 
 }
 test {
