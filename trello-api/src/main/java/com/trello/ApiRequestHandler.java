@@ -1,18 +1,18 @@
 package com.trello;
 
-import java.util.Collection;
 import java.util.HashMap;
 import java.util.Map;
-import java.util.Set;
 
-public class RequestHandler {
+public class ApiRequestHandler {
 
     private Map<String,String> headers;
     private Map<String, String> queryParams;
 
     private String baseUrl;
 
-    public RequestHandler(){
+    private String endpoint;
+
+    public ApiRequestHandler(){
         headers = new HashMap<>();
         queryParams = new HashMap<>();
     }
@@ -39,5 +39,13 @@ public class RequestHandler {
 
     public Map<String,?> getQueryParams() {
         return  this.queryParams;
+    }
+
+    public String getEndpoint() {
+        return endpoint;
+    }
+
+    public void setEndpoint(String endpoint) {
+        this.endpoint = endpoint;
     }
 }

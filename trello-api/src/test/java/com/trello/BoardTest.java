@@ -1,12 +1,11 @@
 package com.trello;
 
+import com.trello.client.RequestManager;
 import com.trello.utils.JsonPath;
 import com.trello.utils.PropertiesInfo;
-import io.restassured.builder.RequestSpecBuilder;
 import io.restassured.builder.ResponseSpecBuilder;
 import io.restassured.http.ContentType;
 import io.restassured.module.jsv.JsonSchemaValidator;
-import io.restassured.specification.RequestSpecification;
 import io.restassured.specification.ResponseSpecification;
 import org.testng.Assert;
 import org.testng.annotations.BeforeClass;
@@ -17,20 +16,18 @@ import io.restassured.RestAssured;
 import java.io.InputStream;
 import java.util.HashMap;
 import java.util.Map;
-import java.util.Properties;
 
 public class BoardTest {
-    private RequestSpecification requestSpec;
     private ResponseSpecification responseSpec;
     String apiKey;
     String apiToken;
     private Map<String, String> headers;
     private Map<String, String> queryParams;
     private String boardId = "";
-    private RequestHandler request;
+    private ApiRequestHandler request;
     @BeforeClass
     public void setUp(){
-        request = new RequestHandler();
+        request = new ApiRequestHandler();
         apiKey = PropertiesInfo.getInstance().getApiKey();
         apiToken = PropertiesInfo.getInstance().getApiToken();
 
@@ -43,12 +40,12 @@ public class BoardTest {
         queryParams.put("key", apiKey);
         queryParams.put("token", apiToken);
 
-        request.setBaseUrl(String.format("%s/%s", PropertiesInfo.getInstance().getBaseApi(),
-                PropertiesInfo.getInstance().getApiVersion()));
+        /*request.setBaseUrl(String.format("%s/%s", PropertiesInfo.getInstance().getBaseApi(),
+                PropertiesInfo.getInstance().getApiVersion())); */
         request.setHeaders(headers);
         request.setQueryParam(queryParams);
 
-        requestSpec = new RequestSpecBuilder().setBaseUri(request.getBaseUrl()).build();
+        //requestSpec = new RequestSpecBuilder().setBaseUri(request.getBaseUrl()).build();
     }
     /*@Test(priority = 1)
     public void testCreateBoard(){
@@ -71,34 +68,58 @@ public class BoardTest {
     }
 
      */
+    @Test(priority = 1)
+    public void testCreateBoardSchemaValidation(){
+        InputStream createBoardJsonSchema = getClass().getClassLoader()
+                .getResourceAsStream("schemas/createBoardSchema.json");
+        String boardName = "boardTestRoger";
+        //queryParams.put("name", boardName);
+        request.setQueryParam("name", boardName);
+        request.setEndpoint("/boards/");
+
+        var response = RequestManager.post(request);
+        response.then()
+                .and()
+                .assertThat()
+                .body(JsonSchemaValidator.matchesJsonSchema(createBoardJsonSchema))
+                .extract().response();
+
+        var jsonResponse = response.getBody().asPrettyString();
+        //System.out.println(jsonResponse);
+        Assert.assertEquals(response.statusCode(), 200);
+
+        boardId = response.getBody().path("id");
+        System.out.println(String.format("boardId: %s", boardId));
+
+        String name = JsonPath.getResult(response.getBody().asPrettyString(), "$.name");
+        System.out.println(String.format("New Board name: %s", name));
+        Assert.assertEquals(name,boardName);
+    }
     @Test(priority = 2)
     public void updateBoardTest(){
         String boardNameUpdate = "boardTestRogerUpdated";
         request.setQueryParam("name", boardNameUpdate);
         //queryParams.put("name", boardNameUpdate);
+        request.setEndpoint(String.format("/boards/%s", boardId));
 
-        var response = RestAssured.given().log().all().when()
-                .spec(requestSpec)
-                .headers(request.getHeaders())
-                .queryParams(request.getQueryParams())
-                .put(String.format("/boards/%s", boardId))
-                .then()
+        var response = RequestManager.put(request);
+                response.then()
                 .spec(responseSpec).extract().response();
 
         var jsonResponse = response.getBody().asPrettyString();
         //System.out.println(jsonResponse);
-        //Assert.assertEquals(response.statusCode(), 200);
+        //Asserts
+        Assert.assertEquals(response.statusCode(), 200);
+        String nameUpdated = JsonPath.getResult(response.getBody().asPrettyString(), "$.name");
+        Assert.assertEquals(boardNameUpdate, nameUpdated);
     }
     @Test(priority = 3)
     public void getBoardTest(){
         InputStream getBoardJsonSchema = getClass().getClassLoader()
                 .getResourceAsStream("schemas/getBoardSchema.json");
-        var response = RestAssured.given().log().all().when()
-                .spec(requestSpec)
-                .headers(request.getHeaders())
-                .queryParams(request.getQueryParams())
-                .get(String.format("/boards/%s", boardId))
-                .then()
+        request.setEndpoint(String.format("/boards/%s", boardId));
+        var response = RequestManager.get(request);
+                response.then()
                 .and()
                 .assertThat()
                 .body(JsonSchemaValidator.matchesJsonSchema(getBoardJsonSchema))
@@ -113,37 +134,11 @@ public class BoardTest {
     }
     @Test(priority = 4)
     public void deleteBoardTest(){
-        var response = RestAssured.given().log().all().when()
-                .spec(requestSpec)
-                .headers(request.getHeaders())
-                .queryParams(request.getQueryParams())
-                .delete(String.format("/boards/%s", boardId))
-                .then()
+        request.setEndpoint(String.format("/boards/%s", boardId));
+
+        var response = RequestManager.delete(request);
+                response.then()
                 .spec(responseSpec).extract().response();
     }
-    @Test(priority = 1)
-    public void testCreateBoardSchemaValidation(){
-        InputStream createBoardJsonSchema = getClass().getClassLoader()
-                .getResourceAsStream("schemas/createBoardSchema.json");
-        String boardName = "boardTestRoger";
-        //queryParams.put("name", boardName);
-        request.setQueryParam("name", boardName);
-        var response = RestAssured.given().log().all().when()
-                .spec(requestSpec)
-                .headers(request.getHeaders())
-                .queryParams(request.getQueryParams())
-                .post("/boards/")
-                .then()
-                .and()
-                .assertThat()
-                .body(JsonSchemaValidator.matchesJsonSchema(createBoardJsonSchema))
-                .extract().response();
 
-        var jsonResponse = response.getBody().asPrettyString();
-        //System.out.println(jsonResponse);
-        Assert.assertEquals(response.statusCode(), 200);
-
-        boardId = response.getBody().path("id");
-        System.out.println(String.format("boardId: %s", boardId));
-    }
 }
